@@ -1,0 +1,195 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Sportistics | Compare MLB Players</title>
+  <style>
+    body {
+      font-family: 'Segoe UI', sans-serif;
+      margin: 0;
+      background-color: #f4f6f8;
+      color: #333;
+    }
+
+    header {
+      background-color: #0a192f;
+      color: white;
+      padding: 1.5rem 2rem;
+      text-align: center;
+    }
+
+    main {
+      max-width: 900px;
+      margin: 2rem auto;
+      padding: 2rem;
+      background: white;
+      border-radius: 12px;
+      box-shadow: 0 2px 12px rgba(0, 0, 0, 0.08);
+    }
+
+    label {
+      font-weight: bold;
+    }
+
+    input {
+      padding: 10px;
+      font-size: 16px;
+      border-radius: 6px;
+      border: 1px solid #ccc;
+      width: 60%;
+      margin-right: 10px;
+    }
+
+    button {
+      padding: 10px 16px;
+      font-size: 16px;
+      border: none;
+      border-radius: 6px;
+      background-color: #0077cc;
+      color: white;
+      cursor: pointer;
+      margin: 5px 5px 15px 0;
+    }
+
+    button:hover {
+      background-color: #005fa3;
+    }
+
+    #selectedList {
+      list-style: none;
+      padding-left: 0;
+      margin-top: 10px;
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+    }
+
+    #selectedList li {
+      background-color: #e1ecf4;
+      border: 1px solid #0077cc;
+      border-radius: 20px;
+      padding: 8px 14px;
+      font-size: 14px;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-top: 25px;
+    }
+
+    th, td {
+      padding: 10px;
+      border: 1px solid #ddd;
+      text-align: center;
+    }
+
+    th {
+      background-color: #f0f0f0;
+      font-weight: bold;
+    }
+
+    caption {
+      font-size: 20px;
+      font-weight: bold;
+      margin-bottom: 10px;
+    }
+
+    .error {
+      color: red;
+      font-weight: bold;
+      margin-top: 10px;
+    }
+  </style>
+</head>
+<body>
+
+  <header>
+    <h1>Sportistics</h1>
+    <p>Compare MLB Players by 2024 Stats</p>
+  </header>
+
+  <main>
+    <label for="playerInput">Enter a Player Name:</label><br>
+    <input type="text" id="playerInput" placeholder="e.g. Aaron Judge" />
+    <button onclick="addPlayer()">Add</button>
+    <button onclick="clearPlayers()">Clear</button>
+    <button onclick="comparePlayers()">Compare</button>
+
+    <div>
+      <strong>Selected Players:</strong>
+      <ul id="selectedList"></ul>
+    </div>
+
+    <div id="results"></div>
+  </main>
+
+  <script>
+    const selectedPlayers = [];
+
+    function addPlayer() {
+      const input = document.getElementById("playerInput");
+      const name = input.value.trim();
+      if (name && !selectedPlayers.includes(name)) {
+        selectedPlayers.push(name);
+        input.value = "";
+        renderSelected();
+      }
+    }
+
+    function clearPlayers() {
+      selectedPlayers.length = 0;
+      renderSelected();
+      document.getElementById("results").innerHTML = "";
+    }
+
+    function renderSelected() {
+      const ul = document.getElementById("selectedList");
+      ul.innerHTML = "";
+      selectedPlayers.forEach(name => {
+        const li = document.createElement("li");
+        li.textContent = name;
+        ul.appendChild(li);
+      });
+    }
+
+    async function comparePlayers() {
+      if (selectedPlayers.length === 0) return;
+
+      const query = encodeURIComponent(selectedPlayers.join(","));
+      const res = await fetch(`http://127.0.0.1:5000/compare?names=${query}`);
+      const data = await res.json();
+
+      if (data.error) {
+        document.getElementById("results").innerHTML = `<p class="error">${data.error}</p>`;
+        return;
+      }
+
+      if (data.length === 0) {
+        document.getElementById("results").innerHTML = `<p>No data found.</p>`;
+        return;
+      }
+
+      let table = "<table><caption>Player Stat Comparison</caption><thead><tr><th>STAT</th>";
+      data.forEach(player => {
+        table += `<th>${player.name}</th>`;
+      });
+      table += "</tr></thead><tbody>";
+
+      const keys = Object.keys(data[0]).filter(k => !["id", "name", "season_id"].includes(k));
+
+      keys.forEach(stat => {
+        table += `<tr><td>${stat.replaceAll('_', ' ').toUpperCase()}</td>`;
+        data.forEach(player => {
+          table += `<td>${player[stat] ?? '-'}</td>`;
+        });
+        table += "</tr>";
+      });
+
+      table += "</tbody></table>";
+      document.getElementById("results").innerHTML = table;
+    }
+  </script>
+
+</body>
+</html>
